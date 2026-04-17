@@ -2293,6 +2293,8 @@ if (eventsList) {
 // --- Backup & Sync ---
 
 const SYNC_QR_MAX_PAYLOAD_BYTES = 1800; // URL-safe base64 inflates by ~33%; keep URL under ~2.3KB
+const SYNC_LINK_WARN_BYTES = 8 * 1024;   // Warn above ~8KB (messaging apps may truncate)
+const SYNC_LINK_MAX_BYTES = 30 * 1024;   // Hard cap for clipboard/URL safety
 
 const syncBtn = document.getElementById('sync-btn');
 const syncModal = document.getElementById('sync-modal');
@@ -2302,6 +2304,8 @@ const syncQrBtn = document.getElementById('sync-qr-btn');
 const syncQrContainer = document.getElementById('sync-qr-container');
 const syncStats = document.getElementById('sync-stats');
 const syncImportFile = document.getElementById('sync-import-file');
+const syncLinkBtn = document.getElementById('sync-link-btn');
+const syncCopyFeedback = document.getElementById('sync-copy-feedback');
 
 async function gatherAllData() {
     const events = await getAllEvents();
@@ -2461,6 +2465,58 @@ function buildImportUrl(payload) {
     return `${base}#import=${encoded}`;
 }
 
+function showSyncFeedback(msg, isError = false) {
+    if (!syncCopyFeedback) return;
+    syncCopyFeedback.textContent = msg;
+    syncCopyFeedback.classList.remove('hidden');
+    syncCopyFeedback.classList.toggle('sync-feedback-error', !!isError);
+    clearTimeout(showSyncFeedback._timer);
+    showSyncFeedback._timer = setTimeout(() => {
+        syncCopyFeedback.classList.add('hidden');
+    }, 4000);
+}
+
+async function copySyncLink() {
+    const data = await gatherAllData();
+    const url = buildImportUrl(data);
+    const size = new Blob([url]).size;
+    const sizeStr = `${(size / 1024).toFixed(1)} KB`;
+
+    if (size > SYNC_LINK_MAX_BYTES) {
+        showSyncFeedback(`Link too large (${sizeStr}) — use file export instead.`, true);
+        return;
+    }
+
+    // Try Web Share API first (opens native share sheet on mobile)
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'HourBridge data',
+                text: 'Open this link on your other device to import HourBridge data.',
+                url,
+            });
+            showSyncFeedback(`Shared (${sizeStr}).`);
+            return;
+        } catch (err) {
+            if (err && err.name === 'AbortError') return; // user cancelled
+            // Otherwise fall through to clipboard
+        }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+        await navigator.clipboard.writeText(url);
+        const warning = size > SYNC_LINK_WARN_BYTES
+            ? ' Warning: some messaging apps may truncate long links.'
+            : '';
+        showSyncFeedback(`Link copied (${sizeStr}). Paste anywhere to share.${warning}`);
+    } catch (err) {
+        // Very old fallback — show a prompt so user can select + copy manually
+        window.prompt('Copy this link (Ctrl/Cmd+C):', url);
+        showSyncFeedback(`Link shown (${sizeStr}).`);
+    }
+}
+
 async function showQrCode() {
     if (typeof qrcode === 'undefined') {
         syncQrContainer.innerHTML = '<div class="sync-error">QR library failed to load. Use file export instead.</div>';
@@ -2533,13 +2589,19 @@ async function openSyncModal() {
     syncModal.classList.remove('hidden');
     syncQrContainer.classList.add('hidden');
     syncQrContainer.innerHTML = '';
+    if (syncCopyFeedback) syncCopyFeedback.classList.add('hidden');
     const data = await gatherAllData();
     const url = buildImportUrl(data);
     const size = new Blob([url]).size;
     const fitsQr = size <= SYNC_QR_MAX_PAYLOAD_BYTES;
-    syncStats.innerHTML = `${data.clients.length} clients · ${data.events.length} events · ~${(size/1024).toFixed(2)} KB ${fitsQr ? '· ✓ fits QR' : '· ✗ too large for QR'}`;
+    const fitsLink = size <= SYNC_LINK_MAX_BYTES;
+    syncStats.innerHTML = `${data.clients.length} clients · ${data.events.length} events · ~${(size/1024).toFixed(2)} KB ${fitsQr ? '· ✓ fits QR' : fitsLink ? '· ✓ fits link' : '· ✗ too large for link'}`;
     syncQrBtn.disabled = !fitsQr;
     syncQrBtn.title = fitsQr ? '' : 'Data too large for QR — use file export';
+    if (syncLinkBtn) {
+        syncLinkBtn.disabled = !fitsLink;
+        syncLinkBtn.title = fitsLink ? '' : 'Data too large for a link — use file export';
+    }
 }
 
 function closeSyncModal() {
@@ -2559,6 +2621,7 @@ if (syncModal) {
 }
 if (syncDownloadBtn) syncDownloadBtn.addEventListener('click', downloadBackup);
 if (syncQrBtn) syncQrBtn.addEventListener('click', showQrCode);
+if (syncLinkBtn) syncLinkBtn.addEventListener('click', copySyncLink);
 if (syncImportFile) {
     syncImportFile.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
