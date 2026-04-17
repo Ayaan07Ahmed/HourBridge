@@ -1690,7 +1690,7 @@ function renderTodaysEvents() {
         const colorStyle = effectiveColor ? `style="background:${effectiveColor}"` : '';
         const isPast = new Date(evt.datetime).getTime() < Date.now() - 60000;
         const links = Array.isArray(evt.links) ? evt.links : [];
-        const firstLink = links[0];
+        const firstLink = links[0] ? normalizeLink(links[0]) : '';
         const linkHtml = firstLink
             ? `<a href="${escapeHtml(firstLink)}" target="_blank" rel="noopener noreferrer" class="today-event-link" title="${escapeHtml(firstLink)}">🔗${links.length > 1 ? `×${links.length}` : ''}</a>`
             : '';
@@ -1746,7 +1746,8 @@ function renderEventsList() {
             : '<div class="event-color-bar"></div>';
         const links = Array.isArray(evt.links) ? evt.links : [];
         const linksHtml = links.length > 0
-            ? `<div class="event-links">${links.map(href => {
+            ? `<div class="event-links">${links.map(rawHref => {
+                const href = normalizeLink(rawHref);
                 const safe = escapeHtml(href);
                 const label = hostFromUrl(href);
                 return `<a href="${safe}" target="_blank" rel="noopener noreferrer" class="event-link">🔗 ${escapeHtml(label)}</a>`;
@@ -1984,11 +1985,24 @@ function closeEventForm() {
     if (eventSaveBtn) eventSaveBtn.textContent = 'Save';
 }
 
+function normalizeLink(url) {
+    if (!url) return '';
+    const trimmed = url.trim();
+    if (!trimmed) return '';
+    // Accept common protocols; otherwise prepend https://
+    // Detects http:, https:, mailto:, tel:, sms:, ftp:, file:, and custom app schemes like zoommtg:
+    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+    // Auto-detect email addresses for mailto:
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return 'mailto:' + trimmed;
+    return 'https://' + trimmed;
+}
+
 function parseLinks(raw) {
     if (!raw) return [];
     return raw.split('\n')
         .map(s => s.trim())
         .filter(Boolean)
+        .map(normalizeLink)
         .slice(0, 10); // Cap at 10 links
 }
 
