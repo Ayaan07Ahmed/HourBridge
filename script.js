@@ -2670,5 +2670,27 @@ if (syncImportFile) {
 // --- Service Worker ---
 
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
+    // Reload once when a new SW takes control, so users always run the latest code
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+    });
+
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+        // Periodically check for new SW versions while the app is open (every 15 min)
+        setInterval(() => { reg.update().catch(() => {}); }, 15 * 60 * 1000);
+    }).catch(err => {
+        console.warn('Service worker registration failed:', err);
+    });
+
+    // When the user returns to the app from another app/tab, check for updates
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            navigator.serviceWorker.getRegistration().then(reg => {
+                if (reg) reg.update().catch(() => {});
+            });
+        }
+    });
 }
