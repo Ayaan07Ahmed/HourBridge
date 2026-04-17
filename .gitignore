@@ -1,0 +1,19 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Dependency folders (in case you ever add any later)
+node_modules/
+
+# Local test overrides
+*.local.*

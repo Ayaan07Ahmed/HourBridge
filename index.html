@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HourBridge</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f3460">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="favicon.svg">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-wrapper">
+        <div class="header">
+            <div class="header-left">
+                <h1>HourBridge</h1>
+                <div class="header-toggles">
+                    <div class="toggle-group">
+                        <span class="toggle-label">24h</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="format-toggle">
+                            <span class="toggle-track"></span>
+                        </label>
+                    </div>
+                    <div class="toggle-group">
+                        <span class="toggle-label">Light</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="theme-toggle">
+                            <span class="toggle-track"></span>
+                        </label>
+                    </div>
+                    <button id="sync-btn" class="sync-header-btn" title="Backup & Sync">📥 Sync</button>
+                </div>
+            </div>
+            <div id="local-greeting" class="local-greeting"></div>
+            <div id="local-clock" class="local-clock"></div>
+        </div>
+
+        <!-- Today's events (left side, above clocks) -->
+        <div id="todays-events" class="todays-events hidden"></div>
+
+        <div class="main-layout">
+            <div class="clocks-column">
+                <button id="add-client-btn" class="add-client-btn">+ Add Client / Partner</button>
+
+                <div id="client-form" class="client-form hidden">
+                    <div class="form-row">
+                        <label>Name
+                            <input type="text" id="client-name-input" maxlength="60" placeholder="Name, Example Ltd">
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>Type</label>
+                        <div class="type-toggle">
+                            <label><input type="radio" name="client-type" value="Client" checked> <span>Client</span></label>
+                            <label><input type="radio" name="client-type" value="Partner"> <span>Partner</span></label>
+                            <label><input type="radio" name="client-type" value="Other"> <span>Other</span></label>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label>Timezone
+                            <div class="search-select">
+                                <input type="text" id="client-tz-search" placeholder="Search timezone or country..." autocomplete="off">
+                                <ul id="client-tz-list" class="dropdown-list hidden"></ul>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>Notes <span class="form-hint">(optional)</span>
+                            <textarea id="client-notes-input" maxlength="200" rows="2" placeholder="Contact details, language, preferences..."></textarea>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>Color (optional)</label>
+                        <div id="client-color-picker" class="client-color-picker"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="client-save-btn" class="form-primary">Save</button>
+                        <button id="client-cancel-btn" class="form-secondary">Cancel</button>
+                    </div>
+                </div>
+
+                <div id="clocks" class="clocks-grid"></div>
+            </div>
+
+            <div class="planner-column" id="planner-column">
+                <div class="tab-bar">
+                    <button id="meeting-btn" class="tab-btn">Business Hours</button>
+                    <button id="calendar-btn" class="tab-btn">📅 Calendar</button>
+                </div>
+                <div id="meeting-planner" class="meeting-planner hidden"></div>
+                <div id="calendar-panel" class="calendar-panel hidden">
+                    <button id="add-event-btn" class="add-event-btn">+ Add Event</button>
+
+                    <div id="event-form" class="event-form hidden">
+                        <div class="form-row">
+                            <label>Title
+                                <input type="text" id="event-title-input" maxlength="80" placeholder="Sales sync, interview...">
+                            </label>
+                        </div>
+                        <div class="form-row form-row-split">
+                            <label>Date <input type="date" id="event-date-input"></label>
+                            <label>Time <input type="time" id="event-time-input"></label>
+                        </div>
+                        <div class="form-row">
+                            <label>Timezone
+                                <select id="event-tz-input"></select>
+                            </label>
+                        </div>
+                        <div class="form-row">
+                            <label>Linked Client <span class="form-hint">(optional)</span>
+                                <select id="event-client-input">
+                                    <option value="">— None —</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="form-row">
+                            <label>Notes
+                                <textarea id="event-notes-input" maxlength="300" rows="2" placeholder="Agenda, topic..."></textarea>
+                            </label>
+                        </div>
+                        <div class="form-row">
+                            <label>Meeting Links <span class="form-hint">(one per line)</span>
+                                <textarea id="event-links-input" rows="3" placeholder="https://zoom.us/j/1234567&#10;https://meet.google.com/abc-defg-hij"></textarea>
+                            </label>
+                        </div>
+                        <div class="form-row">
+                            <label>Color
+                                <select id="event-color-input">
+                                    <option value="">None</option>
+                                    <option value="#e94560">Coral</option>
+                                    <option value="#0fbcbc">Teal</option>
+                                    <option value="#f0a500">Amber</option>
+                                    <option value="#9b5de5">Violet</option>
+                                    <option value="#ff6b35">Tangerine</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="form-actions">
+                            <button id="event-save-btn" class="form-primary">Save</button>
+                            <button id="event-cancel-btn" class="form-secondary">Cancel</button>
+                        </div>
+                    </div>
+
+                    <div id="events-list" class="events-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync modal -->
+    <div id="sync-modal" class="sync-modal hidden">
+        <div class="sync-modal-content">
+            <div class="sync-modal-header">
+                <h2>Backup &amp; Sync</h2>
+                <button id="sync-close-btn" class="modal-close">&times;</button>
+            </div>
+            <div class="sync-modal-body">
+                <section class="sync-section">
+                    <div class="sync-section-title">📤 Send from this device</div>
+                    <div class="sync-stats" id="sync-stats"></div>
+                    <div class="sync-buttons">
+                        <button id="sync-download-btn" class="form-primary">Download backup (.json)</button>
+                        <button id="sync-qr-btn" class="form-secondary">Show QR code</button>
+                    </div>
+                    <div id="sync-qr-container" class="sync-qr-container hidden"></div>
+                </section>
+
+                <hr class="sync-divider">
+
+                <section class="sync-section">
+                    <div class="sync-section-title">📥 Load onto this device</div>
+                    <div class="sync-hint">Pick a backup file or scan the QR on your other device with your phone's camera.</div>
+                    <div class="sync-buttons">
+                        <label for="sync-import-file" class="form-primary sync-import-label">Import backup file
+                            <input type="file" id="sync-import-file" accept=".json,application/json" style="display:none">
+                        </label>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR generator library (cached by service worker after first load) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
